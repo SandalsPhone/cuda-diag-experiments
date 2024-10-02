@@ -126,4 +126,10 @@ int main(int argc, char *argv[]){
         printf("\n");
     }
     printf("\n");
+
+    //free memory
+    cudaFree(arr);
+    free(hostArr);
+
+    return 0;
 }
