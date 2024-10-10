@@ -85,17 +85,28 @@ int main(int argc, char *argv[]){
     //| 0  0  s |
     //| 0  s  0 |
 
-    int z, tSize;
+    int z, tSize, lowestLength;
     int bSize = 1;
-    
+    if(colLength<rowLength){
+        lowestLength = colLength;
+    }
+    else{
+        lowestLength = rowLength;
+    }
+
 	for(int slice=0; slice < colLength*2; slice++){
 		if(slice < colLength){
 			z = 0;
-            tSize = slice + 1;
+            if(slice<lowestLength){
+                tSize = slice + 1;
+            }
+            else{
+                tSize = lowestLength;
+            }
 		}
 		else{
 			z = slice - colLength + 1;
-            tSize = (colLength + 1) - z - 1;
+            tSize = colLength - z;
 		}
 		
         //calculate thread and blocks used
