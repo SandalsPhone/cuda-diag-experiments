@@ -1,4 +1,3 @@
-//TODO: TEST OUT IF THE SLICE AND Z FOR THE DIAGONAL IMPLEMENTATION WORKS AS INTENDED
 #include <cuda_runtime.h>
 #include <string>
 #include <iostream>
@@ -22,10 +21,6 @@ __global__ void insertValues(char *X, char *Y, int *arr, int slice, int z, int r
 
     //the position in 1D array is calculated with (row x column length) + column
     int pos = (row * colLength) + col;
-    //arr[(row * colLength) + col] = slice;
-    //printf("pos: (%d,%u) \n %i  \n", row, col, arr[(row*colLength) + col]);
-    //printf("%i  \n", arr[(row*rowLength) + col]);
-
 
     if (col == 0) {
 		arr[pos] = row;
@@ -35,12 +30,10 @@ __global__ void insertValues(char *X, char *Y, int *arr, int slice, int z, int r
 	}
 	else if (X[col-1] == Y[row-1]) {
 		arr[pos] = arr[pos - rowLength - 1];
-        //arr[pos] = 2;
 	}
 	else {
 	//dp[row - 1][col] og 2nd min
 		arr[pos] = 1 + min(min(arr[pos - 1], arr[pos - rowLength]), arr[pos - rowLength - 1]);
-        //arr[pos] = 1;
 	}  
     
 }
