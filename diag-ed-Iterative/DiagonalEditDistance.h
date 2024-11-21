@@ -1,0 +1,1 @@
+int diagonalEditDistance(const char *X, const char *Y);
