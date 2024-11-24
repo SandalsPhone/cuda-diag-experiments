@@ -46,11 +46,6 @@ int diagonalEditDistance(const char *X, const char *Y){
     int rowLength = strlen(X);
     int colLength = strlen(Y);
 
-    printf("X: %s\n", X);
-    printf("Y: %s\n", Y);
-    printf("X length: %i\n", rowLength);
-    printf("Y length: %i\n", colLength);
-
     char *deviceX, *deviceY;
     cudaMalloc(&deviceX, rowLength*sizeof(char));
     cudaMalloc(&deviceY, colLength*sizeof(char));
@@ -69,16 +64,6 @@ int diagonalEditDistance(const char *X, const char *Y){
     hostArr = (int*) std::malloc(size*sizeof(int));
     cudaMalloc(&arr, size*sizeof(int));
 
-
-    //print before running the kernel(s)
-    printf("Array before:\n");
-    for(int i= 0; i<rowLength; i++){
-        for(int j= 0; j<colLength; j++){
-            printf("%i  ", hostArr[(i*colLength) + j]);
-        }
-        printf("\n");
-    }
-    printf("\n");
 
     //just as a note:
     //the for loop below for the diagonal implementation uses slice as the baseline
@@ -138,23 +123,11 @@ int diagonalEditDistance(const char *X, const char *Y){
 
 		insertValues<<<bSize, tSize>>>(deviceX, deviceY, arr, slice, z, rowLength, colLength);
 	}
-    printf("\n");
 
     //copy device array from insertValues to host array
     cudaMemcpy(hostArr, arr, size*sizeof(int), cudaMemcpyDeviceToHost);
 
     //printArr<<<1,1>>>(arr, rowLength, colLength);
-    
-    //print after running the kernel(s)
-    printf("Array after:\n");
-    for(int i= 0; i<rowLength; i++){
-        for(int j= 0; j<colLength; j++){
-            //printf("%d,%u :%i  ", i, j, hostArr[(i*colLength) + j]);
-            printf("%i  ", hostArr[(i*colLength) + j]);
-        }
-        printf("\n");
-    }
-    printf("\n");
 
 
     int out;
