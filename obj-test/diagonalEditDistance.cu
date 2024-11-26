@@ -35,6 +35,7 @@ __global__ void insertValues(const char *X, const char *Y, int *arr, int slice, 
 	}
 
         //printf("\n 3: %c \n 5: %c \n", Y[2], X[3]);
+    //arr[pos] = slice;
 
     
 }
@@ -96,6 +97,7 @@ int diagonalEditDistance(const char *X, const char *Y){
     //| 0  s  0 |
 
     int z, tSize, lowestLength;
+    int combinedLength = colLength + rowLength;
     int bSize = 1;
     if(colLength<rowLength){
         lowestLength = colLength;
@@ -104,7 +106,7 @@ int diagonalEditDistance(const char *X, const char *Y){
         lowestLength = rowLength;
     }
 
-	for(int slice=0; slice < colLength*2; slice++){
+	for(int slice=0; slice < combinedLength; slice++){
 		if(slice < colLength){
 			z = 0;
             if(slice<lowestLength){
@@ -116,7 +118,7 @@ int diagonalEditDistance(const char *X, const char *Y){
 		}
 		else{
 			z = slice - colLength + 1;
-            tSize = colLength - z;
+            tSize = lowestLength;
 		}
 		
         //calculate thread and blocks used
