@@ -1,0 +1,11 @@
+StartCase:	0
+EndCase:	1
+Total number of clusters: 1
+Edit distance hist:
+0	1
+Substitution rate:	0
+Deletion rate:	0
+Insertion rate:	0
+Error rate:	0
+Success rate:	0.5
+number of majority test 0
