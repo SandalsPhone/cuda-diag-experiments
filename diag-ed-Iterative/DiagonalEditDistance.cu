@@ -131,7 +131,7 @@ int diagonalEditDistance(const char *X, const char *Y){
 
 
     int out;
-    cudaMemcpy(&out, arr+(rowLength*colLength), sizeof(int), cudaMemcpyDeviceToHost);
+    cudaMemcpy(&out, arr+(rowLength*colLength) - 1, sizeof(int), cudaMemcpyDeviceToHost);
 
     cudaFree(deviceX);
     cudaFree(deviceY);
