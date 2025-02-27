@@ -8,38 +8,38 @@ NVCC_FLAGS=
 # ****************************************************
 
 
-main: DNA.obj LCS2.obj EditDistance.obj Clone.obj Cluster2.obj LongestPath.obj CommonSubstring2.obj DividerBMA.obj DiagonalEditDistance.obj
-	$(NVCC) -o main DNA.obj LCS2.obj EditDistance.obj Clone.obj Cluster2.obj LongestPath.obj CommonSubstring2.obj DiagonalEditDistance.obj
+main: DNA.o LCS2.o EditDistance.o Clone.o Cluster2.o LongestPath.o CommonSubstring2.o DividerBMA.o DiagonalEditDistance.o
+	$(NVCC) -o main DNA.o LCS2.o EditDistance.o Clone.o Cluster2.o LongestPath.o CommonSubstring2.o DiagonalEditDistance.o
 # ****************************************************
 
-DNA.obj: DNA.cu
+DNA.o: DNA.cu
 	$(NVCC) $(NVCC_FLAGS) -c DNA.cu
 
-LCS2.obj: LCS2.cu
+LCS2.o: LCS2.cu
 	$(NVCC) $(NVCC_FLAGS) -c LCS2.cu
 
-EditDistance.obj: EditDistance.cu
+EditDistance.o: EditDistance.cu
 	$(NVCC) $(NVCC_FLAGS) -c EditDistance.cu
 
-Clone.obj: Clone.cu
+Clone.o: Clone.cu
 	$(NVCC) $(NVCC_FLAGS) -c Clone.cu
 
-Cluster2.obj: Cluster2.cu
+Cluster2.o: Cluster2.cu
 	$(NVCC) $(NVCC_FLAGS) -c Cluster2.cu
 
-LongestPath.obj: LongestPath.cu
+LongestPath.o: LongestPath.cu
 	$(NVCC) $(NVCC_FLAGS) -c LongestPath.cu
 
-CommonSubstring2.obj: CommonSubstring2.cu
+CommonSubstring2.o: CommonSubstring2.cu
 	$(NVCC) $(NVCC_FLAGS) -c CommonSubstring2.cu
 
-DividerBMA.obj: DividerBMA.cu
+DividerBMA.o: DividerBMA.cu
 	$(NVCC) $(NVCC_FLAGS) -c DividerBMA.cu
 
-DiagonalEditDistance.obj: DiagonalEditDistance.cu
+DiagonalEditDistance.o: DiagonalEditDistance.cu
 	$(NVCC) $(NVCC_FLAGS) -c DiagonalEditDistance.cu
 
 
 clean:
-	$(RM) *.obj
+	$(RM) *.o
 
