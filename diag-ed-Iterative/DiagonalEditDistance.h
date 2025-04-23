@@ -1,1 +1,1 @@
-int diagonalEditDistance(const char *X, const char *Y);
+int diagonalEditDistance(const char *X, const char *Y, char* deviceX, char* deviceY, int* dp, int* deviceArr);

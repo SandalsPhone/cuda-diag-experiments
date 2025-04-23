@@ -71,7 +71,7 @@ int EditDistanceArray(const string& X, const string& Y, int m, int n, vector<vec
 
 // subPriority, delPriority, insPriority - permutation of 1,2,3
 vector<LetterOps> BacktrackEditDistancePriority(const string& X, const string& Y, int m, int n,
-		const vector<vector<int> >& dp, const int subPriority, const int insPriority, const int delPriority) {
+		int* dp, const int subPriority, const int insPriority, const int delPriority) {
 	vector<LetterOps> s(X.size() + 1);
 	if (m == 0) {
 		s[0].insert = Y.substr(0, n);
@@ -91,16 +91,33 @@ vector<LetterOps> BacktrackEditDistancePriority(const string& X, const string& Y
 		return s;
 	}
 	else {
+		//cout<< "m - 1: " << X[m-1]<< endl;
+		//cout<< "n - 1: " << Y[n-1]<< endl;
+		//cout<< "m: " << m << endl;
+		//cout<< "n: " << n << endl;
+		int pos = m * (Y.length() + 1) + n;
+		//for(int i =0; i<(X.length()+1);i++){
+		//	for(int j = 0; j<(Y.length()+1); j++){
+		//		cout<< dp[(Y.length()+1)*i + j]<< "  ";
+		//	}
+		//	cout<<endl;
+		//}
+		//cout << "pos: "<< dp[pos] << endl;
 		int subEqual = 0, delEqual = 0, insEqual = 0;
-		if (dp[m][n] == dp[m - 1][n - 1] + 1) {
+		if (dp[pos] == dp[pos - Y.length() - 2] + 1) {
 			subEqual = 1;
 		}
-		if (dp[m][n] == dp[m][n - 1] + 1) {
+		if (dp[pos] == dp[pos - 1] + 1) {
 			insEqual = 1;
 		}
-		if (dp[m][n] == dp[m - 1][n] + 1) {
+		if (dp[pos] == dp[pos - Y.length() - 1] + 1) {
 			delEqual = 1;
 		}
+		//cout<< X << endl;
+		//cout<< Y << endl;
+		//cout << "-m -n: " << dp[pos - Y.length() - 2] << "||" << m - 1 << endl;
+		//cout << "-n: " << dp[pos - 1] << "||" << n - 1 << endl;
+		//cout << "-m: " << dp[pos - Y.length() - 1] <<"||"<< pos - Y.length() - 1 << endl;
 		int subScore = subEqual * subPriority, delScore = delEqual * delPriority, insScore = insEqual * insPriority;
 		bool chooseSub = false, chooseDel = false, chooseIns = false;
 		if (subScore > delScore && subScore > insScore) {
@@ -138,7 +155,7 @@ vector<LetterOps> BacktrackEditDistancePriority(const string& X, const string& Y
 }
 
 vector<LetterOps> BacktrackEditDistanceRandom(const string& X, const string& Y, int m, int n,
-		const vector<vector<int> >& dp, vector<int>& priorities, mt19937& generator) {
+		int* dp, vector<int>& priorities, mt19937& generator) {
 	vector<LetterOps> s(X.size() + 1);
 	if (m == 0) {
 		s[0].insert = Y.substr(0, n);
@@ -160,15 +177,28 @@ vector<LetterOps> BacktrackEditDistanceRandom(const string& X, const string& Y, 
 		//random_shuffle(priorities.begin(),priorities.end());
 		shuffle(priorities.begin(), priorities.end(), generator);
 		int subEqual = 0, delEqual = 0, insEqual = 0;
-		if (dp[m][n] == dp[m - 1][n - 1] + 1) {
+		int pos = m * (Y.length() + 1) + n;
+		for(int i =0; i<(X.length()+1);i++){
+			for(int j = 0; j<(Y.length()+1); j++){
+				cout<< dp[(Y.length()+1)*i + j]<< "  ";
+			}
+			cout<<endl;
+		}
+		cout << "pos: "<< dp[pos] << endl;
+		if (dp[pos] == dp[pos - Y.length() - 2] + 1) {
 			subEqual = 1;
 		}
-		if (dp[m][n] == dp[m][n - 1] + 1) {
+		if (dp[pos] == dp[pos - 1] + 1) {
 			insEqual = 1;
 		}
-		if (dp[m][n] == dp[m - 1][n] + 1) {
+		if (dp[pos] == dp[pos - Y.length() - 1] + 1) {
 			delEqual = 1;
 		}
+		cout<< X << endl;
+		cout<< Y << endl;
+		cout << "-m -n: " << dp[pos - Y.length() - 2] << "||" << m - 1 << endl;
+		cout << "-n: " << dp[pos - 1] << "||" << n - 1 << endl;
+		cout << "-m: " << dp[pos - Y.length() - 1] <<"||"<< pos - Y.length() + 1 << endl;
 		int subScore = subEqual * priorities[0], delScore = delEqual * priorities[2], insScore = insEqual
 				* priorities[1];
 		bool chooseSub = false, chooseDel = false, chooseIns = false;
@@ -212,12 +242,17 @@ vector<LetterOps> BacktrackEditDistanceRandom(const string& X, const string& Y, 
 // 5 - DIR = [1,2,3]
 // 6 - Random branch each time
 vector<LetterOps> ComputeEditDistancePriority(const string& X, const string& Y, const int priority,
-		mt19937& generator) {
-
+		mt19937& generator, char* deviceX, char* deviceY, int* dp, int* deviceArr) {
+	//printf("compute priority\n");
 	int m = X.length(), n = Y.length();
-	vector<vector<int> > dp(m + 1, vector<int>(n + 1));
+	const char *chrX = X.data();
+    const char *chrY = Y.data();
+	//vector<vector<int> > dp(m + 1, vector<int>(n + 1));
+	//(int*) std::malloc(size*sizeof(int));
+	//int* dp = (int*) std::malloc(((m+1)*(n+1))*sizeof(int));
 	vector<LetterOps> result;
-	EditDistanceArray(X, Y, m, n, dp);
+	//EditDistanceArray(X, Y, m, n, dp);
+	diagonalEditDistance(chrX, chrY, deviceX, deviceY, dp, deviceArr);
 	if (priority == 0) {
 		result = BacktrackEditDistancePriority(X, Y, m, n, dp, 3, 2, 1);
 	}
@@ -256,13 +291,14 @@ vector<LetterOps> ComputeEditDistancePriority(const string& X, const string& Y, 
 
 int ComputeEditDistanceNum(const string& X, const string& Y) {
 
-	//int m = X.length(), n = Y.length();
-	//vector<vector<int> > dp(m + 1, vector<int>(n + 1));
-	const char *chrX = X.data();
-    const char *chrY = Y.data();
+	int m = X.length(), n = Y.length();
+	vector<vector<int> > dp(m + 1, vector<int>(n + 1));
+	//const char *chrX = X.data();
+    //const char *chrY = Y.data();
+	//int* dp = (int*) std::malloc(((X.length()+1)*(Y.length()+1))*sizeof(int));
 
-	//return EditDistanceArray(X, Y, m, n, dp);
-	return diagonalEditDistance(chrX, chrY);
+	return EditDistanceArray(X, Y, m, n, dp);
+	//return diagonalEditDistance(chrX, chrY, dp);
 }
 
 map<string, double> CountOperations(const vector<LetterOps>& opList) {
@@ -323,14 +359,14 @@ vector<LetterOps> ReverseOps(const vector<LetterOps>& ops) {
 	return reversed;
 }
 
-vector<LetterOps> ComputeEditDistancePriorityReverse(const string& X, const string& Y, const int priority,
-		mt19937& generator){
-	string XReverse = X, YReverse=Y;
-	reverse(XReverse.begin(),XReverse.end());
-	reverse(YReverse.begin(),YReverse.end());
-	vector<LetterOps> revOps = ComputeEditDistancePriority(XReverse,YReverse,priority,generator);
-	return ReverseOps(revOps);
-}
+//vector<LetterOps> ComputeEditDistancePriorityReverse(const string& X, const string& Y, const int priority,
+//		mt19937& generator){
+//	string XReverse = X, YReverse=Y;
+//	reverse(XReverse.begin(),XReverse.end());
+//	reverse(YReverse.begin(),YReverse.end());
+//	vector<LetterOps> revOps = ComputeEditDistancePriority(XReverse,YReverse,priority,generator);
+//	return ReverseOps(revOps);
+//}
 
 //void TestEdit() {
 //	string str1 = "xxxx";

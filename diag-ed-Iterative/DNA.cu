@@ -22,7 +22,7 @@ using namespace std;
 
 void TestFixAll(int testNum, int strandLen, int cloneNum, int delPatternLen, const int subPriority,
 		const int delPriority, const int insPriority, const int maxReps, const double delProb, const double insProb,
-		const double subProb) {
+		const double subProb, char* deviceX, char* deviceY, int* dp, int* deviceArr) {
 	unsigned sd = chrono::high_resolution_clock::now().time_since_epoch().count();
 	mt19937 generator(sd);
 
@@ -53,12 +53,12 @@ void TestFixAll(int testNum, int strandLen, int cloneNum, int delPatternLen, con
 //				insPriority, generator, minEqual, maxReps, convReps);
 
 		string finalGuess = cluster.TestBest(delPatternLen, roundFinalGuessEditDist, subPriority, delPriority,
-				insPriority, generator, maxReps);
+				insPriority, generator, maxReps, deviceX, deviceY, dp, deviceArr);
 		roundFinalGuessEditDist = ComputeEditDistanceNum(cluster.Original(), finalGuess);
 		editDistanceHist[roundFinalGuessEditDist]++;
 		cumTotalFinalGuessEditDist += roundFinalGuessEditDist;
 
-		vector<LetterOps> result = ComputeEditDistancePriority(finalGuess, cluster.Original(), 0, generator);
+		vector<LetterOps> result = ComputeEditDistancePriority(finalGuess, cluster.Original(), 0, generator, deviceX, deviceY, dp, deviceArr);
 		map<string, double> countOperations = CountOperations(result);
 		assert(countOperations["I"] + countOperations["D"] + countOperations["R"] == roundFinalGuessEditDist);
 
@@ -81,7 +81,7 @@ void TestFixAll(int testNum, int strandLen, int cloneNum, int delPatternLen, con
 }
 
 void TestOriginalRetention(int testNum, int strandLen, int cloneNum, int delPatternLen, const int subPriority,
-		const int delPriority, const int insPriority) {
+		const int delPriority, const int insPriority, char* deviceX, char* deviceY, int* dp, int* deviceArr) {
 	unsigned sd = chrono::high_resolution_clock::now().time_since_epoch().count();
 	mt19937 generator(sd);
 
@@ -91,7 +91,7 @@ void TestOriginalRetention(int testNum, int strandLen, int cloneNum, int delPatt
 		Cluster2 cluster(strandLen, cloneNum, 0.1, 0.1, 0.1, generator);
 
 		cluster.TestOriginalRetention(delPatternLen, roundFinalGuessEditDist, subPriority, delPriority, insPriority,
-				generator);
+				generator, deviceX, deviceY, dp, deviceArr);
 
 		cumTotalFinalGuessEditDist += roundFinalGuessEditDist;
 
@@ -215,7 +215,7 @@ void GetCaseWithCopiesLimit(ifstream& input, string& original, vector<string>& c
 }
 
 void TestFromFile(const string& inputFilename, int testNum, int strandLen, int maxCopies, int delPatternLen,
-		const int subPriority, const int delPriority, const int insPriority, const int maxReps) {
+		const int subPriority, const int delPriority, const int insPriority, const int maxReps, char* deviceX, char* deviceY, int* dp, int* deviceArr) {
 	ifstream input;
 	input.open(inputFilename.c_str());
 	if (!input.is_open()) {
@@ -263,13 +263,13 @@ void TestFromFile(const string& inputFilename, int testNum, int strandLen, int m
         }*/
 		else {
 			finalGuess = cluster.TestBest(delPatternLen, roundFinalGuessEditDist, subPriority, delPriority, insPriority,
-					generator, maxReps);
+					generator, maxReps, deviceX, deviceY, dp, deviceArr);
 		}
 		roundFinalGuessEditDist = ComputeEditDistanceNum(cluster.Original(), finalGuess);
 		editDistanceHist[roundFinalGuessEditDist]++;
 		cumTotalFinalGuessEditDist += roundFinalGuessEditDist;
 
-		vector<LetterOps> result = ComputeEditDistancePriority(finalGuess, cluster.Original(), 0, generator);
+		vector<LetterOps> result = ComputeEditDistancePriority(finalGuess, cluster.Original(), 0, generator, deviceX, deviceY, dp, deviceArr);
 		map<string, double> countOperations = CountOperations(result);
 		assert(countOperations["I"] + countOperations["D"] + countOperations["R"] == roundFinalGuessEditDist);
 
@@ -312,7 +312,8 @@ void TestFromFileCaseRange(const string& inputFilename, const string& outputFile
                            const string& resultsFilename_success, const string& resultsFilename_fail,
                            int startCase, int endCase,
         int strandLen, int maxCopies, int delPatternLen, const int subPriority, const int delPriority,
-		const int insPriority, const int maxReps) {
+		const int insPriority, const int maxReps,
+		char* deviceX, char* deviceY, int* dp, int* deviceArr) {
 	ifstream input;
 	input.open(inputFilename.c_str());
 	if (!input.is_open()) {
@@ -380,7 +381,7 @@ void TestFromFileCaseRange(const string& inputFilename, const string& outputFile
         }*/
 		else {
 			finalGuess = cluster.TestBest(delPatternLen, roundFinalGuessEditDist, subPriority, delPriority, insPriority,
-					generator, maxReps);
+					generator, maxReps, deviceX, deviceY, dp, deviceArr);
 		}
 
 
@@ -401,8 +402,8 @@ void TestFromFileCaseRange(const string& inputFilename, const string& outputFile
             results_success << "Distance: " << roundFinalGuessEditDist << endl << endl;
 
         }
-
-		vector<LetterOps> result = ComputeEditDistancePriority(finalGuess, cluster.Original(), 0, generator);
+		
+		vector<LetterOps> result = ComputeEditDistancePriority(finalGuess, cluster.Original(), 0, generator, deviceX, deviceY, dp, deviceArr);
 		map<string, double> countOperations = CountOperations(result);
 		assert(countOperations["I"] + countOperations["D"] + countOperations["R"] == roundFinalGuessEditDist);
 
@@ -626,15 +627,27 @@ int main(int argc, char *argv[])
     string resultsFileName_success = output_path+"/output-results-success.txt";
     string resultsFileName_fail =output_path+"/output-results-fail.txt";
 
+	char* deviceX,  *deviceY;
+	int* dp = (int*) std::malloc(((401)*(401))*sizeof(int));
+	int* deviceArr;
+	cudaMalloc(&deviceX, ((401)*sizeof(char)));
+	cudaMalloc(&deviceY, ((401)*sizeof(char)));
+	cudaMalloc(&deviceArr, (401*401)*sizeof(int));
+
 //	int startCase = 400001;
 //	int endCase = 596499;
 //	string outputFileName = "LuisOutC.txt";
     int testNum=getTestNum(input_file);
 
     TestFromFileCaseRange(input_file, outputFileName, resultsFileName_success, resultsFileName_fail, 0, testNum, 150, maxCopies, delPatternLen,
-            subPriority, delPriority, insPriority, maxReps);
+            subPriority, delPriority, insPriority, maxReps, deviceX, deviceY, dp, deviceArr);
 //	TestFromFile("evyaA.txt", testNum, 152, maxCopies, delPatternLen, subPriority, delPriority, insPriority,
 //				maxReps);
+
+	cudaFree(deviceX);
+    cudaFree(deviceY);
+    cudaFree(deviceArr);
+    free(dp);
 
 	clock_t end = clock();
 	double elapsed_secs = double(end - begin) / CLOCKS_PER_SEC;

@@ -221,13 +221,19 @@ void Cluster2::CmpLCS2(const unsigned int anchorIndex) {
 	}
 }
 
-void Cluster2::ComputeEditLists(const unsigned int anchorIndex, const int priority, mt19937& generator) {
+void Cluster2::ComputeEditLists(const unsigned int anchorIndex, const int priority, mt19937& generator, char* deviceY, char* deviceX,
+int* dp, int* deviceArr) {
 	editLists.clear();
+	//char* deviceX,  deviceY;
+	//cudaMalloc(&deviceX, ((X.length()+1)*sizeof(char)));
+	//cudaMalloc(&deviceY, ((X.length()+6)*sizeof(char)));
+
 	for (unsigned int index = 0; index < clones.size(); index++) {
 		if (anchorIndex != index) {
+			//printf("editlistpushback\n");
 			editLists.push_back(
 					ComputeEditDistancePriority(clones[anchorIndex].String(), clones[index].String(), priority,
-							generator));
+							generator, deviceX, deviceY, dp, deviceArr));
 //			editLists.push_back(
 //					ComputeEditDistancePriorityReverse(clones[anchorIndex].String(), clones[index].String(), priority,
 //							generator));
@@ -248,10 +254,10 @@ vector<int> Cluster2::InsArray(const int cloneIndex) {
 }
 
 vector<map<string, int> > Cluster2::CumEditOperationsNoInserts(const int cloneIndex, const int priority,
-		mt19937& generator) {
+		mt19937& generator, char* deviceY, char* deviceX, int* dp, int* deviceArr) {
 	unsigned vectorSize = clones[cloneIndex].Len() + 1;
 	vector<map<string, int> > cum(vectorSize);
-	ComputeEditLists(cloneIndex, priority, generator);
+	ComputeEditLists(cloneIndex, priority, generator, deviceX, deviceY, dp, deviceArr);
 	for (unsigned listIndex = 0; listIndex < editLists.size(); listIndex++) {
 		for (unsigned letterIndex = 0; letterIndex < vectorSize; letterIndex++) {
 			string opKey = editLists[listIndex][letterIndex].CDR;
@@ -265,10 +271,10 @@ vector<map<string, int> > Cluster2::CumEditOperationsNoInserts(const int cloneIn
 }
 
 vector<map<string, int> > Cluster2::CumEditOperationsInserts(const int cloneIndex, const int priority,
-		mt19937& generator) {
+		mt19937& generator, char* deviceY, char* deviceX, int* dp, int* deviceArr) {
 	unsigned vectorSize = clones[cloneIndex].Len() + 1;
 	vector<map<string, int> > cum(vectorSize);
-	ComputeEditLists(cloneIndex, priority, generator);
+	ComputeEditLists(cloneIndex, priority, generator, deviceX, deviceY, dp, deviceArr);
 	for (unsigned listIndex = 0; listIndex < editLists.size(); listIndex++) {
 		for (unsigned letterIndex = 0; letterIndex < vectorSize; letterIndex++) {
 			string insString = editLists[listIndex][letterIndex].insert;
@@ -486,10 +492,10 @@ vector<string> RepStringRDISubstitutionsArrayNoGaps(const vector<LetterOps>& ope
 }
 
 vector<map<string, int> > Cluster2::RepStringRDIDictionaries(const int cloneIndex, const int patternLen,
-		const int priority, mt19937& generator) {
+		const int priority, mt19937& generator, char* deviceY, char* deviceX, int* dp, int* deviceArr) {
 	unsigned vectorSize = clones[cloneIndex].Len() + 1;
 	vector<map<string, int> > dictionaries(vectorSize);
-	ComputeEditLists(cloneIndex, priority, generator);
+	ComputeEditLists(cloneIndex, priority, generator, deviceX, deviceY, dp, deviceArr);
 	for (unsigned listIndex = 0; listIndex < editLists.size(); listIndex++) {
 		vector<string> currentVector = RepStringRDIArray(editLists[listIndex], patternLen);
 		for (unsigned letterIndex = 0; letterIndex < vectorSize; letterIndex++) {
@@ -499,10 +505,10 @@ vector<map<string, int> > Cluster2::RepStringRDIDictionaries(const int cloneInde
 	return dictionaries;
 }
 vector<map<string, int> > Cluster2::RepStringRDISubDictionaries(const int cloneIndex, const int patternLen,
-		const int priority, mt19937& generator) {
+		const int priority, mt19937& generator, char* deviceY, char* deviceX, int* dp, int* deviceArr) {
 	unsigned vectorSize = clones[cloneIndex].Len() + 1;
 	vector<map<string, int> > dictionaries(vectorSize);
-	ComputeEditLists(cloneIndex, priority, generator);
+	ComputeEditLists(cloneIndex, priority, generator, deviceX, deviceY, dp, deviceArr);
 	for (unsigned listIndex = 0; listIndex < editLists.size(); listIndex++) {
 		vector<string> currentVector = RepStringRDISubstitutionsArray(editLists[listIndex], patternLen);
 		for (unsigned letterIndex = 0; letterIndex < vectorSize; letterIndex++) {
@@ -513,10 +519,10 @@ vector<map<string, int> > Cluster2::RepStringRDISubDictionaries(const int cloneI
 }
 
 vector<map<string, int> > Cluster2::RepStringRDISubNoGapsDictionaries(const int cloneIndex, const int patternLen,
-		const int priority, mt19937& generator) {
+		const int priority, mt19937& generator, char* deviceY, char* deviceX, int* dp, int* deviceArr) {
 	unsigned vectorSize = clones[cloneIndex].Len() + 1;
 	vector<map<string, int> > dictionaries(vectorSize);
-	ComputeEditLists(cloneIndex, priority, generator);
+	ComputeEditLists(cloneIndex, priority, generator, deviceX, deviceY, dp, deviceArr);
 	for (unsigned listIndex = 0; listIndex < editLists.size(); listIndex++) {
 		vector<string> currentVector = RepStringRDISubstitutionsArrayNoGaps(editLists[listIndex], patternLen);
 		for (unsigned letterIndex = 0; letterIndex < vectorSize; letterIndex++) {
@@ -700,15 +706,18 @@ vector<pair<int, string> > Cluster2::GuessDeletionsByLowercaseGapsStringPath(con
 }
 
 vector<pair<int, string> > Cluster2::GuessDeletionsByRDIStringPath(const int cloneIndex, const int patternLen,
-		const int priority, mt19937& generator) {
-	vector<map<string, int> > dictionariesArray = RepStringRDIDictionaries(cloneIndex, patternLen, priority, generator);
+		const int priority, mt19937& generator, char* deviceX, char* deviceY, int* dp, int* deviceArr) {
+	vector<map<string, int> > dictionariesArray = RepStringRDIDictionaries(cloneIndex, patternLen, priority, generator,
+	deviceX, deviceY, dp, deviceArr);
 	vector<string> chosenStrings = DictLongestPath(dictionariesArray, patternLen);
 	return BuildDeletionGuesses(chosenStrings);
 }
 
-vector<pair<int, string> > Cluster2::GuessSubstitutions(const int cloneIndex, const int priority, mt19937& generator) {
+vector<pair<int, string> > Cluster2::GuessSubstitutions(const int cloneIndex, const int priority, mt19937& generator,
+	char* deviceX, char* deviceY, int* dp, int* deviceArr) {
 	vector<pair<int, string> > substitutions;
-	vector<map<string, int> > dictionariesArray = CumEditOperationsNoInserts(cloneIndex, priority, generator);
+	vector<map<string, int> > dictionariesArray = CumEditOperationsNoInserts(cloneIndex, priority, generator, deviceX, deviceY,
+	dp, deviceArr);
 	for (unsigned int index = 0; index < dictionariesArray.size(); index++) {
 		string maxOp = max(dictionariesArray[index]);
 		if (maxOp.empty()) {
@@ -721,9 +730,11 @@ vector<pair<int, string> > Cluster2::GuessSubstitutions(const int cloneIndex, co
 	return substitutions;
 }
 
-vector<int> Cluster2::GuessInsertsRDI(const int cloneIndex, const int priority, mt19937& generator) {
+vector<int> Cluster2::GuessInsertsRDI(const int cloneIndex, const int priority, mt19937& generator, char* deviceX,
+	char* deviceY, int* dp, int* deviceArr) {
 	vector<int> inserts;
-	vector<map<string, int> > dictionariesArray = CumEditOperationsNoInserts(cloneIndex, priority, generator);
+	vector<map<string, int> > dictionariesArray = CumEditOperationsNoInserts(cloneIndex, priority, generator, deviceX, deviceY,
+		dp, deviceArr);
 	for (unsigned int index = 0; index < dictionariesArray.size(); index++) {
 		string maxOp = max(dictionariesArray[index]);
 		if (maxOp.empty()) {
@@ -736,9 +747,11 @@ vector<int> Cluster2::GuessInsertsRDI(const int cloneIndex, const int priority, 
 	return inserts;
 }
 
-vector<pair<int, string> > Cluster2::GuessDeletionsRDI(const int cloneIndex, const int priority, mt19937& generator) {
+vector<pair<int, string> > Cluster2::GuessDeletionsRDI(const int cloneIndex, const int priority, mt19937& generator,
+	char* deviceX, char* deviceY, int* dp, int* deviceArr) {
 	vector<pair<int, string> > deletions;
-	vector<map<string, int> > dictionariesArray = CumEditOperationsInserts(cloneIndex, priority, generator);
+	vector<map<string, int> > dictionariesArray = CumEditOperationsInserts(cloneIndex, priority, generator, deviceX, deviceY,
+	dp, deviceArr);
 	for (unsigned int index = 0; index < dictionariesArray.size(); index++) {
 		string maxString = max(dictionariesArray[index]);
 		if (!maxString.empty()) {
@@ -773,17 +786,17 @@ vector<pair<int, string> > BuildSubstitutionGuessesNoGaps(const int patternLen, 
 }
 
 vector<pair<int, string> > Cluster2::GuessSubstitutionsRDIPath(const int cloneIndex, const int patternLen,
-		const int priority, mt19937& generator) {
+		const int priority, mt19937& generator, char* deviceX, char* deviceY, int* dp, int* deviceArr) {
 	vector<map<string, int> > dictionariesArray = RepStringRDISubDictionaries(cloneIndex, patternLen, priority,
-			generator);
+			generator, deviceX, deviceY, dp, deviceArr);
 	vector<string> chosenStrings = DictLongestPath(dictionariesArray, patternLen);
 	return BuildSubstitutionGuesses(patternLen, chosenStrings, clones[cloneIndex].String());
 }
 
 vector<pair<int, string> > Cluster2::GuessSubstitutionsRDINoGapsPath(const int cloneIndex, const int patternLen,
-		const int priority, mt19937& generator) {
+		const int priority, mt19937& generator, char* deviceX, char* deviceY, int* dp, int* deviceArr) {
 	vector<map<string, int> > dictionariesArray = RepStringRDISubNoGapsDictionaries(cloneIndex, patternLen, priority,
-			generator);
+			generator, deviceX, deviceY, dp, deviceArr);
 	vector<string> chosenStrings = DictLongestPath(dictionariesArray, patternLen);
 	return BuildSubstitutionGuessesNoGaps(patternLen, chosenStrings, clones[cloneIndex].String());
 }
@@ -849,16 +862,20 @@ void Cluster2::FixAllDeletions(const int patternLen) {
 	}
 }
 
-void Cluster2::FixAllInserts(const int insPriority, mt19937& generator) {
+void Cluster2::FixAllInserts(const int insPriority, mt19937& generator, char* deviceX, char* deviceY, 
+int* dp, int* deviceArr) {
 	for (int index = 0; index < (int) clones.size(); index++) {
-		vector<int> guesses = GuessInsertsRDI(index, insPriority, generator);
+		vector<int> guesses = GuessInsertsRDI(index, insPriority, generator, deviceX, deviceY, 
+		dp, deviceArr);
 		clones[index].FixInsertGuesses(guesses);
 	}
 }
 
-void Cluster2::FixAllSubstitutions(const int subPriority, mt19937& generator) {
+void Cluster2::FixAllSubstitutions(const int subPriority, mt19937& generator, char* deviceX, char* deviceY, 
+int* dp, int* deviceArr) {
 	for (int index = 0; index < (int) clones.size(); index++) {
-		vector<pair<int, string> > guesses = GuessSubstitutions(index, subPriority, generator);
+		vector<pair<int, string> > guesses = GuessSubstitutions(index, subPriority, generator, deviceX, deviceY, 
+		dp, deviceArr);
 		clones[index].FixSubstitutionGuesses(guesses);
 	}
 }
@@ -882,11 +899,13 @@ void Cluster2::FixAllDeletionsClonesLastInitial(const int delPatternLen, const i
 //	Fix insertions of all clones by the current state of clones. CHANGE TO BACKUP IS COMMENTED
 //	Fixed clones stored in clones.
 
-void Cluster2::FixAllInsertsClonesLastInitial(const int insPriority, mt19937& generator) {
+void Cluster2::FixAllInsertsClonesLastInitial(const int insPriority, mt19937& generator, char* deviceX, 
+char* deviceY, int* dp, int* deviceArr) {
 	vector<Clone> computedClones, beforeFixClones = clones;
 	for (int index = 0; index < (int) clones.size(); index++) {
 		//clones[index] = clonesBackup[index];
-		vector<int> guesses = GuessInsertsRDI(index, insPriority, generator);
+		vector<int> guesses = GuessInsertsRDI(index, insPriority, generator, deviceX, deviceY, 
+		dp, deviceArr);
 		clones[index].FixInsertGuesses(guesses);
 		computedClones.push_back(clones[index]);
 		clones[index] = beforeFixClones[index];
@@ -897,11 +916,13 @@ void Cluster2::FixAllInsertsClonesLastInitial(const int insPriority, mt19937& ge
 // Fix substitutions of all clones by the current state of clones. CHANGE TO BACKUP IS COMMENTED
 //	Fixed clones stored in clones.
 
-void Cluster2::FixAllSubstitutionsClonesLastInitial(const int subPriority, mt19937& generator) {
+void Cluster2::FixAllSubstitutionsClonesLastInitial(const int subPriority, mt19937& generator, char* deviceX, 
+char* deviceY, int* dp, int* deviceArr) {
 	vector<Clone> computedClones, beforeFixClones = clones;
 	for (int index = 0; index < (int) clones.size(); index++) {
 		//clones[index] = clonesBackup[index];
-		vector<pair<int, string> > guesses = GuessSubstitutions(index, subPriority, generator);
+		vector<pair<int, string> > guesses = GuessSubstitutions(index, subPriority, generator, deviceX, deviceY, 
+		dp, deviceArr);
 		clones[index].FixSubstitutionGuesses(guesses);
 		computedClones.push_back(clones[index]);
 		clones[index] = beforeFixClones[index];
@@ -912,9 +933,11 @@ void Cluster2::FixAllSubstitutionsClonesLastInitial(const int subPriority, mt199
 // Fix one clone. fix order: substitutions, deletions with STRING PATH, insertions.
 
 void Cluster2::FixOneCopyRDIDelPath(const int cloneIndex, const int delPatternLen, const int subPriority,
-		const int delPriority, const int insPriority, mt19937& generator) {
+		const int delPriority, const int insPriority, mt19937& generator, char* deviceX, char* deviceY, 
+		int* dp, int* deviceArr) {
 
-	vector<pair<int, string> > guesses = GuessSubstitutions(cloneIndex, subPriority, generator);
+	vector<pair<int, string> > guesses = GuessSubstitutions(cloneIndex, subPriority, generator, deviceX, deviceY, 
+	dp, deviceArr);
 //	if (cloneIndex == 0 and !guesses.empty()) {
 //		cout << "Substitutions Fixed!" << endl;
 //	}
@@ -927,7 +950,8 @@ void Cluster2::FixOneCopyRDIDelPath(const int cloneIndex, const int delPatternLe
 //	}
 	clones[cloneIndex].FixDeletionGuesses(guesses1);
 
-	vector<int> guesses2 = GuessInsertsRDI(cloneIndex, insPriority, generator);
+	vector<int> guesses2 = GuessInsertsRDI(cloneIndex, insPriority, generator, deviceX, deviceY, 
+	dp, deviceArr);
 //	if (cloneIndex == 0 and !guesses2.empty() and guesses1.empty()) {
 //		cout << "Inserts Fixed without previous deletion fixed!" << endl;
 //	}
@@ -942,15 +966,18 @@ void Cluster2::FixOneCopyRDIDelPath(const int cloneIndex, const int delPatternLe
 
 void Cluster2::FixOneCopyRDIAll(const int cloneIndex, const int subPatternLen, const int delPatternLen,
 		const double insThreshold, const int subPriority, const int delPriority, const int insPriority,
-		mt19937& generator) {
+		mt19937& generator, char* deviceX, char* deviceY, int* dp, int* deviceArr) {
 
-	vector<pair<int, string> > guesses = GuessSubstitutions(cloneIndex, subPriority, generator);
+	vector<pair<int, string> > guesses = GuessSubstitutions(cloneIndex, subPriority, generator, deviceX, deviceY, 
+	dp, deviceArr);
 	clones[cloneIndex].FixSubstitutionGuesses(guesses);
 
-	vector<pair<int, string> > guesses1 = GuessDeletionsRDI(cloneIndex, delPriority, generator);
+	vector<pair<int, string> > guesses1 = GuessDeletionsRDI(cloneIndex, delPriority, generator, deviceX, deviceY, 
+	dp, deviceArr);
 	clones[cloneIndex].FixDeletionGuesses(guesses1);
 
-	vector<int> guesses2 = GuessInsertsRDI(cloneIndex, insPriority, generator);
+	vector<int> guesses2 = GuessInsertsRDI(cloneIndex, insPriority, generator, deviceX, deviceY, 
+	dp, deviceArr);
 	clones[cloneIndex].FixInsertGuesses(guesses2);
 
 }
@@ -978,9 +1005,10 @@ vector<int> FilterInsertGuesses(const vector<int>& guesses, const int maxIndex) 
 // Fix all one by one: Fix one clone. fix order: substitutions, deletions with STRING PATH, insertions.
 
 void Cluster2::FixAllOneByOneRDI(const int delPatternLen, const int subPriority, const int delPriority,
-		const int insPriority, mt19937& generator) {
+		const int insPriority, mt19937& generator, char* deviceX, char* deviceY, int* dp, int* deviceArr) {
 	for (int index = 0; index < (int) clones.size(); index++) {
-		FixOneCopyRDIDelPath(index, delPatternLen, subPriority, delPriority, insPriority, generator);
+		FixOneCopyRDIDelPath(index, delPatternLen, subPriority, delPriority, insPriority, generator,
+		deviceX, deviceY, dp, deviceArr);
 	}
 }
 
@@ -989,10 +1017,11 @@ void Cluster2::FixAllOneByOneRDI(const int delPatternLen, const int subPriority,
 //	All fixed clones will be stored in clones vector.
 
 void Cluster2::FixAllOneByOneRDIChangeClonesLast(const int delPatternLen, const int subPriority, const int delPriority,
-		const int insPriority, mt19937& generator) {
+		const int insPriority, mt19937& generator, char* deviceX, char* deviceY, int* dp, int* deviceArr) {
 	vector<Clone> computedClones, beforeFixClones = clones;
 	for (int index = 0; index < (int) clones.size(); index++) {
-		FixOneCopyRDIDelPath(index, delPatternLen, subPriority, delPriority, insPriority, generator);
+		FixOneCopyRDIDelPath(index, delPatternLen, subPriority, delPriority, insPriority, generator,
+		deviceX, deviceY, dp, deviceArr);
 		computedClones.push_back(clones[index]);
 		clones[index] = beforeFixClones[index];
 
@@ -1005,11 +1034,13 @@ void Cluster2::FixAllOneByOneRDIChangeClonesLast(const int delPatternLen, const 
 //	All fixed clones will be stored in clones vector.
 
 void Cluster2::FixAllOneByOneRDIChangeClonesLastInitial(const int delPatternLen, const int subPriority,
-		const int delPriority, const int insPriority, mt19937& generator) {
+		const int delPriority, const int insPriority, mt19937& generator,  char* deviceX, char* deviceY, 
+		int* dp, int* deviceArr) {
 	vector<Clone> computedClones, beforeFixClones = clones;
 	for (int index = 0; index < (int) clones.size(); index++) {
 		clones[index] = clonesBackup[index];
-		FixOneCopyRDIDelPath(index, delPatternLen, subPriority, delPriority, insPriority, generator);
+		FixOneCopyRDIDelPath(index, delPatternLen, subPriority, delPriority, insPriority, generator,
+		deviceX, deviceY, dp, deviceArr);
 		computedClones.push_back(clones[index]);
 		clones[index] = beforeFixClones[index];
 	}
@@ -1030,10 +1061,12 @@ int CountCorrectSize(const vector<Clone>& clones, unsigned correctSize) {
 // Fix all one by one: Fix one clone. fix order: substitutions, deletions with STRING PATH, insertions.
 
 void Cluster2::FixAllOneByOneRDIRepeat(const int delPatternLen, const int subPriority, const int delPriority,
-		const int insPriority, mt19937& generator, const int maxReps) {
+		const int insPriority, mt19937& generator, const int maxReps,
+		char* deviceX, char* deviceY, int* dp, int* deviceArr) {
 
 	for (int i = 0; i < maxReps; i++) {
-		FixAllOneByOneRDI(delPatternLen, subPriority, delPriority, insPriority, generator);
+		FixAllOneByOneRDI(delPatternLen, subPriority, delPriority, insPriority, generator,
+		deviceX, deviceY, dp, deviceArr);
 	}
 }
 
@@ -1043,10 +1076,12 @@ void Cluster2::FixAllOneByOneRDIRepeat(const int delPatternLen, const int subPri
 //	All fixed clones will be stored in clones vector.
 
 void Cluster2::FixAllOneByOneRDIChangeClonesLastRepeat(const int delPatternLen, const int subPriority,
-		const int delPriority, const int insPriority, mt19937& generator, const int minEqual, const int maxReps) {
+		const int delPriority, const int insPriority, mt19937& generator, const int minEqual, const int maxReps,
+		char* deviceX, char* deviceY, int* dp, int* deviceArr) {
 
 	for (int i = 0; i < maxReps; i++) {
-		FixAllOneByOneRDIChangeClonesLast(delPatternLen, subPriority, delPriority, insPriority, generator);
+		FixAllOneByOneRDIChangeClonesLast(delPatternLen, subPriority, delPriority, insPriority, generator,
+		deviceX, deviceY, dp, deviceArr);
 	}
 }
 
@@ -1056,21 +1091,27 @@ void Cluster2::FixAllOneByOneRDIChangeClonesLastRepeat(const int delPatternLen, 
 //	All fixed clones will be stored in clones vector.
 
 void Cluster2::FixAllOneByOneRDIChangeClonesLastInitialRepeat(const int delPatternLen, const int subPriority,
-		const int delPriority, const int insPriority, mt19937& generator, const int maxReps) {
+		const int delPriority, const int insPriority, mt19937& generator, const int maxReps, 
+		char* deviceX, char* deviceY, int* dp, int* deviceArr) {
 
 	for (int i = 0; i < maxReps; i++) {
-		FixAllOneByOneRDIChangeClonesLastInitial(delPatternLen, subPriority, delPriority, insPriority, generator);
+		FixAllOneByOneRDIChangeClonesLastInitial(delPatternLen, subPriority, delPriority, insPriority, generator,
+		deviceX, deviceY, dp, deviceArr);
 	}
 }
 
 void Cluster2::TestSubstitutionGuesses(const int clone_index, map<string, double>& roundCountBefore,
 		map<string, double>& roundCountAfter, double& distNoReplaceBefore, double& distNoReplaceAfter,
-		const int priority, mt19937& generator) {
+		const int priority, mt19937& generator, char* deviceX, char* deviceY, int* dp, int* deviceArr) {
+	//char* deviceX,  deviceY;
 
-	FixAllSubstitutions(priority, generator);
+	FixAllSubstitutions(priority, generator, deviceX, deviceY, dp, deviceArr);
+			//printf("oplistafter\n");
+	//cudaMalloc(&deviceX, ((original.length()+1)*sizeof(char)));
+	//cudaMalloc(&deviceY, ((original.length()+6)*sizeof(char)));
 
 	vector<LetterOps> opListAfter = ComputeEditDistancePriority(original, clones[clone_index].String(), priority,
-			generator);
+			generator, deviceX, deviceY, dp, deviceArr);
 	roundCountAfter = CountOperations(opListAfter);
 	distNoReplaceAfter = ComputeEditDistWithoutReplace(clones[clone_index].String(), original);
 }
@@ -1246,8 +1287,9 @@ string BestClone(const vector<Clone>& clones, int correctSize) {
 }
 
 void Cluster2::SortClonesByInitial(const int delPatternLen, const int subPriority, const int delPriority,
-		const int insPriority, mt19937& generator) {
-	FixAllOneByOneRDIChangeClonesLast(delPatternLen, subPriority, delPriority, insPriority, generator);
+		const int insPriority, mt19937& generator, char* deviceX, char* deviceY, int* dp, int* deviceArr) {
+	FixAllOneByOneRDIChangeClonesLast(delPatternLen, subPriority, delPriority, insPriority, generator,
+	deviceX, deviceY, dp, deviceArr);
 	//compare c;
 	compare c;
 	int clonesNum = clones.size();
@@ -1274,8 +1316,10 @@ void Cluster2::SortClonesByInitial(const int delPatternLen, const int subPriorit
 
 void Cluster2::FixAllNormal(const int delPatternLen, const int subPriority, const int delPriority,
 		const int insPriority, mt19937& generator, const int maxReps, vector<Clone>& normalResult,
-		vector<Clone>& reverseResult) {
-	FixAllOneByOneRDIRepeat(delPatternLen, subPriority, delPriority, insPriority, generator, maxReps);
+		vector<Clone>& reverseResult,
+		char* deviceX, char* deviceY, int* dp, int* deviceArr) {
+	FixAllOneByOneRDIRepeat(delPatternLen, subPriority, delPriority, insPriority, generator, maxReps,
+	deviceX, deviceY, dp, deviceArr);
 	normalResult = clones;
 	clones = clonesBackup;
 }
@@ -1379,10 +1423,12 @@ int ConvGuess(const vector<Clone>& clones, const vector<Clone>& clonesBackup, co
 void Cluster2::TestFixAll(const int delPatternLen, vector<int>& cloneOriginalEDS, double& avgCloneEditDist,
 		int& cumCorrectSizeCloneEditDist, int& correctSizeCloneNum, int& bingoNum, int& firstHalfBingoNum,
 		int& secondHalfBingoNum, int& minED, int& maxED, int& finalGuessEditDist, const int subPriority,
-		const int delPriority, const int insPriority, mt19937& generator, const int maxReps) {
+		const int delPriority, const int insPriority, mt19937& generator, const int maxReps,
+		char* deviceX, char* deviceY, int *dp, int* deviceArr) {
 
 	vector<Clone> normalResult, reverseResult, joinedResult;
-	FixAllNormal(delPatternLen, subPriority, delPriority, insPriority, generator, maxReps, normalResult, reverseResult);
+	FixAllNormal(delPatternLen, subPriority, delPriority, insPriority, generator, maxReps, normalResult, reverseResult,
+	deviceX, deviceY, dp, deviceArr);
 	// join normal clones and reverse clones
 	joinedResult = normalResult;
 	joinedResult.insert(joinedResult.end(), reverseResult.begin(), reverseResult.end());
@@ -1412,9 +1458,9 @@ void Cluster2::TestFixAll(const int delPatternLen, vector<int>& cloneOriginalEDS
 
 void Cluster2::FixAllClonesLastNormal(const int delPatternLen, const int subPriority, const int delPriority,
 		const int insPriority, mt19937& generator, const int minEqual, const int maxReps, vector<Clone>& normalResult,
-		vector<Clone>& reverseResult) {
+		vector<Clone>& reverseResult, char* deviceX, char* deviceY, int* dp, int* deviceArr) {
 	FixAllOneByOneRDIChangeClonesLastRepeat(delPatternLen, subPriority, delPriority, insPriority, generator, minEqual,
-			maxReps);
+			maxReps, deviceX, deviceY, dp, deviceArr);
 	normalResult = clones;
 	clones = clonesBackup;
 }
@@ -1422,11 +1468,12 @@ void Cluster2::FixAllClonesLastNormal(const int delPatternLen, const int subPrio
 void Cluster2::TestFixAllClonesLast(const int delPatternLen, vector<int>& cloneOriginalEDS, double& avgCloneEditDist,
 		int& cumCorrectSizeCloneEditDist, int& correctSizeCloneNum, int& bingoNum, int& firstHalfBingoNum,
 		int& secondHalfBingoNum, int& minED, int& maxED, int& finalGuessEditDist, const int subPriority,
-		const int delPriority, const int insPriority, mt19937& generator, const int minEqual, const int maxReps) {
+		const int delPriority, const int insPriority, mt19937& generator, const int minEqual, const int maxReps,
+		char* deviceX, char* deviceY, int *dp, int* deviceArr) {
 
 	vector<Clone> normalResult, reverseResult, joinedResult;
 	FixAllClonesLastNormal(delPatternLen, subPriority, delPriority, insPriority, generator, minEqual, maxReps,
-			normalResult, reverseResult);
+			normalResult, reverseResult, deviceX, deviceY, dp, deviceArr);
 	// join normal clones and reverse clones
 	joinedResult = normalResult;
 	joinedResult.insert(joinedResult.end(), reverseResult.begin(), reverseResult.end());
@@ -1484,12 +1531,14 @@ void NearClonesMaps(const vector<Clone>& normalResult, const vector<Clone>& reve
 
 void Cluster2::FixAllClonesVerticalHorizontalNormal(const int delPatternLen, const int subPriority,
 		const int delPriority, const int insPriority, mt19937& generator, const int maxReps,
-		vector<Clone>& normalResult, vector<Clone>& reverseResult) {
-	FixAllSubstitutionsClonesLastInitial(subPriority, generator);
+		vector<Clone>& normalResult, vector<Clone>& reverseResult,
+		char* deviceX, char* deviceY, int* dp, int* deviceArr) {
+	FixAllSubstitutionsClonesLastInitial(subPriority, generator, deviceX, deviceY, dp, deviceArr);
 	FixAllDeletionsClonesLastInitial(delPatternLen, delPriority, generator);
-	FixAllInsertsClonesLastInitial(insPriority, generator);
+	FixAllInsertsClonesLastInitial(insPriority, generator, deviceX, deviceY, dp, deviceArr);
 
-	FixAllOneByOneRDIChangeClonesLastInitialRepeat(delPatternLen, subPriority, delPriority, insPriority, generator, 1);
+	FixAllOneByOneRDIChangeClonesLastInitialRepeat(delPatternLen, subPriority, delPriority, insPriority, generator, 1,
+	deviceX, deviceY, dp, deviceArr);
 	normalResult = clones;
 	clones = clonesBackup;
 }
@@ -1512,22 +1561,25 @@ void Cluster2::FixAllClonesVerticalHorizontalNormal(const int delPatternLen, con
 
 void Cluster2::FixAllClonesVerticalHorizontalNormalAndReverse(const int delPatternLen, const int subPriority,
 		const int delPriority, const int insPriority, mt19937& generator, const int maxReps,
-		vector<Clone>& normalResult, vector<Clone>& reverseResult) {
+		vector<Clone>& normalResult, vector<Clone>& reverseResult,
+		char* deviceX, char* deviceY, int* dp, int* deviceArr) {
 	vector<Clone> temp = clonesBackup;
 
-	FixAllSubstitutionsClonesLastInitial(subPriority, generator);
+	FixAllSubstitutionsClonesLastInitial(subPriority, generator, deviceX, deviceY, dp, deviceArr);
 	FixAllDeletionsClonesLastInitial(delPatternLen, delPriority, generator);
-	FixAllInsertsClonesLastInitial(insPriority, generator);
-	FixAllOneByOneRDIChangeClonesLastInitialRepeat(delPatternLen, subPriority, delPriority, insPriority, generator, 1);
+	FixAllInsertsClonesLastInitial(insPriority, generator, deviceX, deviceY, dp, deviceArr);
+	FixAllOneByOneRDIChangeClonesLastInitialRepeat(delPatternLen, subPriority, delPriority, insPriority, generator, 1,
+	deviceX, deviceY, dp, deviceArr);
 	normalResult = clones;
 	clones = clonesBackup;
 	ReverseClones();
 	clonesBackup = clones;
 
-	FixAllSubstitutionsClonesLastInitial(subPriority, generator);
+	FixAllSubstitutionsClonesLastInitial(subPriority, generator, deviceX, deviceY, dp, deviceArr);
 	FixAllDeletionsClonesLastInitial(delPatternLen, delPriority, generator);
-	FixAllInsertsClonesLastInitial(insPriority, generator);
-	FixAllOneByOneRDIChangeClonesLastInitialRepeat(delPatternLen, subPriority, delPriority, insPriority, generator, 1);
+	FixAllInsertsClonesLastInitial(insPriority, generator, deviceX, deviceY, dp, deviceArr);
+	FixAllOneByOneRDIChangeClonesLastInitialRepeat(delPatternLen, subPriority, delPriority, insPriority, generator, 1,
+	deviceX, deviceY, dp, deviceArr);
 
 	ReverseClones();
 	reverseResult = clones;
@@ -1548,12 +1600,14 @@ void Cluster2::FixAllClonesVerticalHorizontalNormalAndReverse(const int delPatte
 
 void Cluster2::FixAllClonesHorizontalVerticalNormal(const int delPatternLen, const int subPriority,
 		const int delPriority, const int insPriority, mt19937& generator, const int maxReps,
-		vector<Clone>& normalResult, vector<Clone>& reverseResult) {
-	FixAllOneByOneRDIChangeClonesLastInitialRepeat(delPatternLen, subPriority, delPriority, insPriority, generator, 1);
+		vector<Clone>& normalResult, vector<Clone>& reverseResult,
+		char* deviceX, char* deviceY, int* dp, int* deviceArr) {
+	FixAllOneByOneRDIChangeClonesLastInitialRepeat(delPatternLen, subPriority, delPriority, insPriority, generator, 1, 
+	deviceX, deviceY, dp, deviceArr);
 
-	FixAllSubstitutionsClonesLastInitial(subPriority, generator);
+	FixAllSubstitutionsClonesLastInitial(subPriority, generator, deviceX, deviceY, dp, deviceArr);
 	FixAllDeletionsClonesLastInitial(delPatternLen, delPriority, generator);
-	FixAllInsertsClonesLastInitial(insPriority, generator);
+	FixAllInsertsClonesLastInitial(insPriority, generator, deviceX, deviceY, dp, deviceArr);
 
 	normalResult = clones;
 	clones = clonesBackup;
@@ -1578,23 +1632,26 @@ void Cluster2::FixAllClonesHorizontalVerticalNormal(const int delPatternLen, con
 
 void Cluster2::FixAllClonesHorizontalVerticalNormalAndReverse(const int delPatternLen, const int subPriority,
 		const int delPriority, const int insPriority, mt19937& generator, const int maxReps,
-		vector<Clone>& normalResult, vector<Clone>& reverseResult) {
+		vector<Clone>& normalResult, vector<Clone>& reverseResult,
+		char* deviceX, char* deviceY, int* dp, int* deviceArr) {
 	vector<Clone> temp = clonesBackup;
 
-	FixAllOneByOneRDIChangeClonesLastInitialRepeat(delPatternLen, subPriority, delPriority, insPriority, generator, 1);
-	FixAllSubstitutionsClonesLastInitial(subPriority, generator);
+	FixAllOneByOneRDIChangeClonesLastInitialRepeat(delPatternLen, subPriority, delPriority, insPriority, generator, 1,
+	deviceX, deviceY, dp, deviceArr);
+	FixAllSubstitutionsClonesLastInitial(subPriority, generator, deviceX, deviceY, dp, deviceArr);
 	FixAllDeletionsClonesLastInitial(delPatternLen, delPriority, generator);
-	FixAllInsertsClonesLastInitial(insPriority, generator);
+	FixAllInsertsClonesLastInitial(insPriority, generator, deviceX, deviceY, dp, deviceArr);
 
 	normalResult = clones;
 	clones = clonesBackup;
 	ReverseClones();
 	clonesBackup = clones;
 
-	FixAllOneByOneRDIChangeClonesLastInitialRepeat(delPatternLen, subPriority, delPriority, insPriority, generator, 1);
-	FixAllSubstitutionsClonesLastInitial(subPriority, generator);
+	FixAllOneByOneRDIChangeClonesLastInitialRepeat(delPatternLen, subPriority, delPriority, insPriority, generator, 1,
+	deviceX, deviceY, dp, deviceArr);
+	FixAllSubstitutionsClonesLastInitial(subPriority, generator, deviceX, deviceY, dp, deviceArr);
 	FixAllDeletionsClonesLastInitial(delPatternLen, delPriority, generator);
-	FixAllInsertsClonesLastInitial(insPriority, generator);
+	FixAllInsertsClonesLastInitial(insPriority, generator, deviceX, deviceY, dp, deviceArr);
 
 	ReverseClones();
 	reverseResult = clones;
@@ -1611,9 +1668,9 @@ void Cluster2::FixAllClonesHorizontalVerticalNormalAndReverse(const int delPatte
 
 void Cluster2::FixAllClonesLastInitialNormal(const int delPatternLen, const int subPriority, const int delPriority,
 		const int insPriority, mt19937& generator, const int maxReps, vector<Clone>& normalResult,
-		vector<Clone>& reverseResult) {
+		vector<Clone>& reverseResult, char* deviceX, char* deviceY, int* dp, int* deviceArr) {
 	FixAllOneByOneRDIChangeClonesLastInitialRepeat(delPatternLen, subPriority, delPriority, insPriority, generator,
-			maxReps);
+			maxReps, deviceX, deviceY, dp, deviceArr);
 	normalResult = clones;
 	clones = clonesBackup;
 }
@@ -1632,16 +1689,17 @@ void Cluster2::FixAllClonesLastInitialNormal(const int delPatternLen, const int 
 
 void Cluster2::FixAllClonesLastInitialNormalAndReverse(const int delPatternLen, const int subPriority,
 		const int delPriority, const int insPriority, mt19937& generator, const int maxReps,
-		vector<Clone>& normalResult, vector<Clone>& reverseResult) {
+		vector<Clone>& normalResult, vector<Clone>& reverseResult,
+		char* deviceX, char* deviceY, int* dp, int* deviceArr) {
 	vector<Clone> temp = clonesBackup;
 	FixAllOneByOneRDIChangeClonesLastInitialRepeat(delPatternLen, subPriority, delPriority, insPriority, generator,
-			maxReps);
+			maxReps, deviceX, deviceY, dp, deviceArr);
 	normalResult = clones;
 	clones = clonesBackup;
 	ReverseClones();
 	clonesBackup = clones;
 	FixAllOneByOneRDIChangeClonesLastInitialRepeat(delPatternLen, subPriority, delPriority, insPriority, generator,
-			maxReps);
+			maxReps, deviceX, deviceY, dp, deviceArr);
 	ReverseClones();
 	reverseResult = clones;
 	// restore originals
@@ -1652,11 +1710,12 @@ void Cluster2::FixAllClonesLastInitialNormalAndReverse(const int delPatternLen, 
 void Cluster2::TestFixAllClonesLastInitial(const int delPatternLen, vector<int>& cloneOriginalEDS,
 		double& avgCloneEditDist, int& cumCorrectSizeCloneEditDist, int& correctSizeCloneNum, int& bingoNum,
 		int& firstHalfBingoNum, int& secondHalfBingoNum, int& minED, int& maxED, int& finalGuessEditDist,
-		const int subPriority, const int delPriority, const int insPriority, mt19937& generator, const int maxReps) {
+		const int subPriority, const int delPriority, const int insPriority, mt19937& generator, const int maxReps,
+		char* deviceX, char* deviceY, int *dp, int* deviceArr) {
 
 	vector<Clone> normalResult, reverseResult, joinedResult;
 	FixAllClonesLastInitialNormal(delPatternLen, subPriority, delPriority, insPriority, generator, maxReps,
-			normalResult, reverseResult);
+			normalResult, reverseResult, deviceX, deviceY, dp, deviceArr);
 	// join normal clones and reverse clones
 	joinedResult = normalResult;
 	joinedResult.insert(joinedResult.end(), reverseResult.begin(), reverseResult.end());
@@ -1685,11 +1744,12 @@ void Cluster2::TestFixAllClonesLastInitial(const int delPatternLen, vector<int>&
 //	Fixed clones stored in clones.
 
 void Cluster2::FixAllByErrorTypeRepeat(const int delPatternLen, const int subPriority, const int delPriority,
-		const int insPriority, mt19937& generator, const int maxReps) {
+		const int insPriority, mt19937& generator, const int maxReps,
+		char* deviceX, char* deviceY, int* dp, int* deviceArr) {
 	for (int i = 0; i < maxReps; i++) {
-		FixAllSubstitutionsClonesLastInitial(subPriority, generator);
+		FixAllSubstitutionsClonesLastInitial(subPriority, generator, deviceX, deviceY, dp, deviceArr);
 		FixAllDeletionsClonesLastInitial(delPatternLen, delPriority, generator);
-		FixAllInsertsClonesLastInitial(insPriority, generator);
+		FixAllInsertsClonesLastInitial(insPriority, generator, deviceX, deviceY, dp, deviceArr);
 	}
 }
 
@@ -1702,8 +1762,9 @@ void Cluster2::FixAllByErrorTypeRepeat(const int delPatternLen, const int subPri
 
 void Cluster2::FixAllByErrorTypeNormal(const int delPatternLen, const int subPriority, const int delPriority,
 		const int insPriority, mt19937& generator, const int maxReps, vector<Clone>& normalResult,
-		vector<Clone>& reverseResult) {
-	FixAllByErrorTypeRepeat(delPatternLen, subPriority, delPriority, insPriority, generator, maxReps);
+		vector<Clone>& reverseResult, char* deviceX, char* deviceY, int* dp, int* deviceArr) {
+	FixAllByErrorTypeRepeat(delPatternLen, subPriority, delPriority, insPriority, generator, maxReps,
+	 deviceX, deviceY, dp, deviceArr);
 	normalResult = clones;
 	clones = clonesBackup;
 }
@@ -1721,11 +1782,12 @@ void Cluster2::FixAllByErrorTypeNormal(const int delPatternLen, const int subPri
 //	Reset clones to initial state in backup
 
 void Cluster2::FixAllByErrorTypeNormalAndReverse(const int delPatternLen, const int subPriority, const int delPriority,
-		const int insPriority, mt19937& generator, vector<Clone>& normalResult, vector<Clone>& reverseResult) {
+		const int insPriority, mt19937& generator, vector<Clone>& normalResult, vector<Clone>& reverseResult,
+		char* deviceX, char* deviceY, int* dp, int* deviceArr) {
 	vector<Clone> temp = clonesBackup;
-	FixAllSubstitutionsClonesLastInitial(subPriority, generator);
+	FixAllSubstitutionsClonesLastInitial(subPriority, generator, deviceX, deviceY, dp, deviceArr);
 	FixAllDeletionsClonesLastInitial(delPatternLen, delPriority, generator);
-	FixAllInsertsClonesLastInitial(insPriority, generator);
+	FixAllInsertsClonesLastInitial(insPriority, generator, deviceX, deviceY, dp, deviceArr);
 	normalResult = clones;
 
 	// reverse clones and backup
@@ -1733,9 +1795,9 @@ void Cluster2::FixAllByErrorTypeNormalAndReverse(const int delPatternLen, const 
 	ReverseClones();
 	clonesBackup = clones;
 
-	FixAllSubstitutions(subPriority, generator);
+	FixAllSubstitutions(subPriority, generator, deviceX, deviceY, dp, deviceArr);
 	FixAllDeletions(delPatternLen);
-	FixAllInserts(insPriority, generator);
+	FixAllInserts(insPriority, generator, deviceX, deviceY, dp, deviceArr);
 	ReverseClones();
 	reverseResult = clones;
 
@@ -1748,13 +1810,14 @@ void Cluster2::TestFixAllByErrorType(const int delPatternLen, const double insTh
 		double& avgCloneEditDist, int& cumCorrectSizeCloneEditDist, int& correctSizeCloneNum, int& bingoNum,
 		int& firstHalfBingoNum, int& secondHalfBingoNum, int& minED, int& maxED, int& finalGuessEditDist,
 		const int subPriority, const int delPriority, const int insPriority, mt19937& generator, const int minEqual,
-		const int maxReps, const int convReps) {
+		const int maxReps, const int convReps,
+		char* deviceX, char* deviceY, int* dp, int* deviceArr) {
 
 	vector<Clone> normalResult, reverseResult, joinedResult;
 //	FixAllByErrorTypeConverge(subPatternLen, delPatternLen, subPriority, delPriority, insPriority, generator, maxReps,
 //			convReps, normalResult, reverseResult);
 	FixAllByErrorTypeNormal(delPatternLen, subPriority, delPriority, insPriority, generator, maxReps, normalResult,
-			reverseResult);
+			reverseResult, deviceX, deviceY, dp, deviceArr);
 	// join normal clones and reverse clones
 	joinedResult = normalResult;
 	joinedResult.insert(joinedResult.end(), reverseResult.begin(), reverseResult.end());
@@ -1778,26 +1841,30 @@ void Cluster2::TestFixAllByErrorType(const int delPatternLen, const double insTh
 //	compute final guess by one method. add to clones. fix with a!er method.
 
 void Cluster2::FixAllMixed(const int delPatternLen, const int subPriority, const int delPriority, const int insPriority,
-		mt19937& generator, const int maxReps) {
+		mt19937& generator, const int maxReps, char* deviceX, char* deviceY, int* dp, int* deviceArr) {
 
 	vector<Clone> normalClones, reverseClones;
-	FixAllOneByOneRDIChangeClonesLastInitialRepeat(delPatternLen, subPriority, delPriority, insPriority, generator, 2);
+	FixAllOneByOneRDIChangeClonesLastInitialRepeat(delPatternLen, subPriority, delPriority, insPriority, generator, 2,
+	deviceX, deviceY, dp, deviceArr);
 //	FixAllByErrorTypeRepeat(subPatternLen, delPatternLen, subPriority, delPriority, insPriority, generator, maxReps);
 
 	string finalGuess = FinalGuess(clones, clonesBackup, original.size());
 	Clone newClone(original, finalGuess);
 	clones = clonesBackup;
 	clones.insert(clones.begin(), newClone);
-	FixAllOneByOneRDIRepeat(delPatternLen, subPriority, delPriority, insPriority, generator, 2);
+	FixAllOneByOneRDIRepeat(delPatternLen, subPriority, delPriority, insPriority, generator, 2,
+	deviceX, deviceY, dp, deviceArr);
 
 }
 
 void Cluster2::TestFixAllMixed(const int delPatternLen, vector<int>& cloneOriginalEDS, double& avgCloneEditDist,
 		int& cumCorrectSizeCloneEditDist, int& correctSizeCloneNum, int& bingoNum, int& firstHalfBingoNum,
 		int& secondHalfBingoNum, int& minED, int& maxED, int& finalGuessEditDist, const int subPriority,
-		const int delPriority, const int insPriority, mt19937& generator, const int maxReps) {
+		const int delPriority, const int insPriority, mt19937& generator, const int maxReps,
+		char* deviceX, char* deviceY, int *dp, int* deviceArr) {
 
-	FixAllMixed(delPatternLen, subPriority, delPriority, insPriority, generator, maxReps);
+	FixAllMixed(delPatternLen, subPriority, delPriority, insPriority, generator, maxReps, 
+	deviceX, deviceY, dp, deviceArr);
 
 	map<string, int> correctSizeClones, oneLetterDiffClones;
 	int cumCloneOriginalED, correctSizeNum, bingoCount, firstHalfBingoCount, secondHalfBingoCount,
@@ -1822,14 +1889,15 @@ void Cluster2::TestFixAllMixed(const int delPatternLen, vector<int>& cloneOrigin
 //	join results.
 
 string Cluster2::TestBest(const int delPatternLen, int& finalGuessEditDist, const int subPriority,
-		const int delPriority, const int insPriority, mt19937& generator, const int maxReps) {
+		const int delPriority, const int insPriority, mt19937& generator, const int maxReps,
+		char* deviceX, char* deviceY, int* dp, int* deviceArr) {
 	vector<Clone> normalResult, reverseResult, joinedResult;
 	FixAllClonesLastInitialNormalAndReverse(delPatternLen, subPriority, delPriority, insPriority, generator, maxReps,
-			normalResult, reverseResult);
+			normalResult, reverseResult, deviceX, deviceY, dp, deviceArr);
 	joinedResult = normalResult;
 	joinedResult.insert(joinedResult.end(), reverseResult.begin(), reverseResult.end());
 	FixAllByErrorTypeNormalAndReverse(delPatternLen, subPriority, delPriority, insPriority, generator, normalResult,
-			reverseResult);
+			reverseResult, deviceX, deviceY, dp, deviceArr);
 	joinedResult.insert(joinedResult.end(), normalResult.begin(), normalResult.end());
 	joinedResult.insert(joinedResult.end(), reverseResult.begin(), reverseResult.end());
 
@@ -1852,13 +1920,15 @@ string Cluster2::TestBest(const int delPatternLen, int& finalGuessEditDist, cons
 }
 
 void Cluster2::TestOriginalRetention(const int delPatternLen, int& finalGuessEditDist, const int subPriority,
-		const int delPriority, const int insPriority, mt19937& generator) {
+		const int delPriority, const int insPriority, mt19937& generator, char* deviceX, char* deviceY, 
+		int* dp, int* deviceArr) {
 	Clone org(original, original);
 	clones[0] = org;
 	clonesBackup[0] = org;
 //	FixAllOneByOneRDIChangeClonesLastInitial(subPatternLen, delPatternLen, insThreshold, subPriority, delPriority,
 //			insPriority, generator);
-	FixOneCopyRDIDelPath(0, delPatternLen, subPriority, delPriority, insPriority, generator);
+	FixOneCopyRDIDelPath(0, delPatternLen, subPriority, delPriority, insPriority, generator,
+	deviceX, deviceY, dp, deviceArr);
 //	FixAllOneByOneRDIChangeClonesLast(subPatternLen, delPatternLen, insThreshold, subPriority, delPriority,
 //				insPriority, generator);
 //	FixAllSubstitutionsClonesLastInitial(subPatternLen, subPriority, generator);
@@ -1901,14 +1971,17 @@ void Cluster2::PrintStats() const {
 }
 
 void Cluster2::Stats(const int delPatternLen, const int subPriority, const int delPriority, const int insPriority,
-		mt19937& generator) {
+		mt19937& generator, char* deviceX, char* deviceY, int* dp, int* deviceArr) {
 	PrintStats();
-	FixAllOneByOneRDIChangeClonesLast(delPatternLen, subPriority, delPriority, insPriority, generator);
+	FixAllOneByOneRDIChangeClonesLast(delPatternLen, subPriority, delPriority, insPriority, generator, 
+	deviceX, deviceY, dp, deviceArr);
 	PrintStats();
-	FixAllOneByOneRDIChangeClonesLast(delPatternLen, subPriority, delPriority, insPriority, generator);
+	FixAllOneByOneRDIChangeClonesLast(delPatternLen, subPriority, delPriority, insPriority, generator,
+	deviceX, deviceY, dp, deviceArr);
 
 	PrintStats();
-	FixAllOneByOneRDIChangeClonesLast(delPatternLen, subPriority, delPriority, insPriority, generator);
+	FixAllOneByOneRDIChangeClonesLast(delPatternLen, subPriority, delPriority, insPriority, generator,
+	deviceX, deviceY, dp, deviceArr);
 
 	PrintStats();
 	cout << "++++++++++++++++++++++++++++++++++++++++++++++++++" << endl;

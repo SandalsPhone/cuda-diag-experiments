@@ -26,19 +26,20 @@ __global__ void insertValues(const char *X, const char *Y, int *arr, int slice, 
 	else if (row == 0) {
 		arr[pos] = col;
 	}
-	else if (X[col-1] == Y[row-1]) {
-		arr[pos] = arr[pos - rowLength - 1];
+	//else if (X[col-1] == Y[row-1]) {
+    else if (X[row-1] == Y[col-1]) {
+		arr[pos] = arr[pos - colLength - 1];
 	}
 	else {
 	//dp[row - 1][col] og 2nd min
-		arr[pos] = 1 + min(min(arr[pos - 1], arr[pos - rowLength]), arr[pos - rowLength - 1]);
+		arr[pos] = 1 + min(min(arr[pos - 1], arr[pos - colLength]), arr[pos - colLength - 1]);
 	}  
     
 }
 
-int diagonalEditDistance(const char *X, const char *Y){
+int diagonalEditDistance(const char *X, const char *Y, char *deviceX, char *deviceY, int* dp, int* arr){
         //testing 2D arrays with 1D array representation too
-    int *arr, *hostArr;
+    //int *arr;
 
 
     //char X[] = "ABCD";
@@ -46,23 +47,22 @@ int diagonalEditDistance(const char *X, const char *Y){
     int rowLength = strlen(X);
     int colLength = strlen(Y);
 
-    char *deviceX, *deviceY;
-    cudaMalloc(&deviceX, rowLength*sizeof(char));
-    cudaMalloc(&deviceY, colLength*sizeof(char));
+    //char *deviceX, *deviceY;
+    //cudaMalloc(&deviceX, rowLength*sizeof(char));
+    //cudaMalloc(&deviceY, colLength*sizeof(char));
 
     cudaMemcpy(deviceX, X, rowLength*sizeof(char), cudaMemcpyHostToDevice);
     cudaMemcpy(deviceY, Y, colLength*sizeof(char), cudaMemcpyHostToDevice);
 
     rowLength++;
     colLength++;
-
     
 
     int size = rowLength*colLength;
 
     //allocate memory
-    hostArr = (int*) std::malloc(size*sizeof(int));
-    cudaMalloc(&arr, size*sizeof(int));
+    
+    //cudaMalloc(&arr, size*sizeof(int));
 
 
     //just as a note:
@@ -97,7 +97,7 @@ int diagonalEditDistance(const char *X, const char *Y){
         lowestLength = rowLength;
     }
 
-	for(int slice=0; slice < colLength*2; slice++){
+	for(int slice=0; slice < (colLength+rowLength); slice++){
 		if(slice < colLength){
 			z = 0;
             if(slice<lowestLength){
@@ -109,7 +109,7 @@ int diagonalEditDistance(const char *X, const char *Y){
 		}
 		else{
 			z = slice - colLength + 1;
-            tSize = colLength - z;
+            tSize = rowLength - z;
 		}
 		
         //calculate thread and blocks used
@@ -125,18 +125,20 @@ int diagonalEditDistance(const char *X, const char *Y){
 	}
 
     //copy device array from insertValues to host array
-    cudaMemcpy(hostArr, arr, size*sizeof(int), cudaMemcpyDeviceToHost);
+    cudaMemcpy(dp, arr, size*sizeof(int), cudaMemcpyDeviceToHost);
 
     //printArr<<<1,1>>>(arr, rowLength, colLength);
 
 
-    int out;
-    cudaMemcpy(&out, arr+(rowLength*colLength) - 1, sizeof(int), cudaMemcpyDeviceToHost);
+    //int out;
+    //cudaMemcpy(&out, arr+(rowLength*colLength) - 1, sizeof(int), cudaMemcpyDeviceToHost);
 
-    cudaFree(deviceX);
-    cudaFree(deviceY);
-    cudaFree(arr);
-    free(hostArr);
+    //cudaFree(deviceX);
+    //cudaFree(deviceY);
+    //cudaFree(arr);
+    //free(dp);
     
-    return out;
+    //printf("%i",out);
+    //cout<<dp[size - 1] <<endl;
+    return dp[size - 1];
 }

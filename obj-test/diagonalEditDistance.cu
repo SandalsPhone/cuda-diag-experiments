@@ -1,6 +1,8 @@
 #include <iostream>
+#include <stdio.h>
 
-//tbd: string input type
+using namespace std;
+
 __global__ void insertValues(const char *X, const char *Y, int *arr, int slice, int z, int rowLength, int colLength){
     int id = threadIdx.x + blockIdx.x*blockDim.x;
     //row gets shifted down depending on the value of z
@@ -24,54 +26,44 @@ __global__ void insertValues(const char *X, const char *Y, int *arr, int slice, 
 	else if (row == 0) {
 		arr[pos] = col;
 	}
-	else if (X[col-1] == Y[row-1]) {
+	//else if (X[col-1] == Y[row-1]) {
+    else if (X[row-1] == Y[col-1]) {
 		arr[pos] = arr[pos - colLength - 1];
-        //arr[pos] = 9;
 	}
 	else {
 	//dp[row - 1][col] og 2nd min
 		arr[pos] = 1 + min(min(arr[pos - 1], arr[pos - colLength]), arr[pos - colLength - 1]);
-        //arr[pos] = 8;
-	}
-
-        //printf("\n 3: %c \n 5: %c \n", Y[2], X[3]);
-    //arr[pos] = slice;
-
+	}  
     
 }
 
-int diagonalEditDistance(const char *X, const char *Y){
+int diagonalEditDistance(const char *X, const char *Y, char *deviceX, char *deviceY, int* dp, int* arr){
         //testing 2D arrays with 1D array representation too
-    int *arr, *hostArr;
+    //int *arr;
 
 
     //char X[] = "ABCD";
     //char Y[] = "CBAD";
-    int rowLength = strlen(Y);
-    int colLength = strlen(X);
+    int rowLength = strlen(X)+1;
+    int colLength = strlen(Y)+1;
 
-    printf("X: %s\n", X);
-    printf("Y: %s\n", Y);
-    printf("X length: %i\n", colLength);
-    printf("Y length: %i\n", rowLength);
+    //char *deviceX, *deviceY;
+    //cudaMalloc(&deviceX, rowLength*sizeof(char));
+    //cudaMalloc(&deviceY, colLength*sizeof(char));
 
-    char *deviceX, *deviceY;
-    cudaMalloc(&deviceX, colLength*sizeof(char));
-    cudaMalloc(&deviceY, rowLength*sizeof(char));
+    cudaMemcpy(deviceX, X, rowLength*sizeof(char), cudaMemcpyHostToDevice);
+    cudaMemcpy(deviceY, Y, colLength*sizeof(char), cudaMemcpyHostToDevice);
 
-    cudaMemcpy(deviceX, X, colLength*sizeof(char), cudaMemcpyHostToDevice);
-    cudaMemcpy(deviceY, Y, rowLength*sizeof(char), cudaMemcpyHostToDevice);
-
-    rowLength++;
-    colLength++;
-
+    //rowLength++;
+    //colLength++;
     
 
     int size = rowLength*colLength;
 
     //allocate memory
-    hostArr = (int*) std::malloc(size*sizeof(int));
-    cudaMalloc(&arr, size*sizeof(int));
+    
+    //cudaMalloc(&arr, size*sizeof(int));
+
 
     //just as a note:
     //the for loop below for the diagonal implementation uses slice as the baseline
@@ -97,7 +89,6 @@ int diagonalEditDistance(const char *X, const char *Y){
     //| 0  s  0 |
 
     int z, tSize, lowestLength;
-    int combinedLength = colLength + rowLength;
     int bSize = 1;
     if(colLength<rowLength){
         lowestLength = colLength;
@@ -106,7 +97,7 @@ int diagonalEditDistance(const char *X, const char *Y){
         lowestLength = rowLength;
     }
 
-	for(int slice=0; slice < combinedLength; slice++){
+	for(int slice=0; slice < (colLength+rowLength); slice++){
 		if(slice < colLength){
 			z = 0;
             if(slice<lowestLength){
@@ -118,7 +109,7 @@ int diagonalEditDistance(const char *X, const char *Y){
 		}
 		else{
 			z = slice - colLength + 1;
-            tSize = lowestLength;
+            tSize = rowLength - z;
 		}
 		
         //calculate thread and blocks used
@@ -132,32 +123,22 @@ int diagonalEditDistance(const char *X, const char *Y){
 
 		insertValues<<<bSize, tSize>>>(deviceX, deviceY, arr, slice, z, rowLength, colLength);
 	}
-    printf("\n");
 
     //copy device array from insertValues to host array
-    cudaMemcpy(hostArr, arr, size*sizeof(int), cudaMemcpyDeviceToHost);
+    cudaMemcpy(dp, arr, size*sizeof(int), cudaMemcpyDeviceToHost);
 
     //printArr<<<1,1>>>(arr, rowLength, colLength);
+
+
+    //int out;
+    //cudaMemcpy(&out, arr+(rowLength*colLength) - 1, sizeof(int), cudaMemcpyDeviceToHost);
+
+    //cudaFree(deviceX);
+    //cudaFree(deviceY);
+    //cudaFree(arr);
+    //free(dp);
     
-    //print after running the kernel(s)
-    printf("Array after:\n");
-    for(int i= 0; i<rowLength; i++){
-        for(int j= 0; j<colLength; j++){
-            //printf("%d,%u :%i  ", i, j, hostArr[(i*colLength) + j]);
-            printf("%i  ", hostArr[(i*colLength) + j]);
-        }
-        printf("\n");
-    }
-    printf("\n");
-
-
-    int out;
-    cudaMemcpy(&out, arr+(rowLength*colLength) - 1, sizeof(int), cudaMemcpyDeviceToHost);
-
-    cudaFree(deviceX);
-    cudaFree(deviceY);
-    cudaFree(arr);
-    free(hostArr);
-    
-    return out;
+    //printf("%i",out);
+    //cout<<dp[size - 1] <<endl;
+    return dp[size - 1];
 }
